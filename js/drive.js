@@ -102,9 +102,21 @@ async function addUserToSpreadsheet(name, email, phone, address) {
         console.log("스프레드시트에 사용자 추가 시작:", name, email)
 
         // Google API 로드 확인
-        if (!gapi.client || !gapi.client.sheets) {
-            console.error("Google Sheets API가 로드되지 않았습니다.")
-            reject(new Error("Google API가 로드되지 않습니다. 페이지를 새로고침하고 다시 시도하세요."))
+        if (typeof gapi === "undefined") {
+            console.error("Google API(gapi)가 정의되지 않았습니다.")
+            reject(new Error("Google API가 로드되지 않았습니다."))
+            return
+        }
+
+        if (!gapi.client) {
+            console.error("gapi.client가 정의되지 않았습니다.")
+            reject(new Error("Google API 클라이언트가 초기화되지 않았습니다."))
+            return
+        }
+
+        if (!gapi.client.sheets) {
+            console.error("gapi.client.sheets가 정의되지 않았습니다.")
+            reject(new Error("Google Sheets API가 로드되지 않았습니다."))
             return
         }
 
@@ -152,8 +164,21 @@ async function addUserToSpreadsheet(name, email, phone, address) {
 async function getAllUsers() {
     return new Promise((resolve, reject) => {
         // Google API 로드 확인
-        if (!gapi.client || !gapi.client.sheets) {
-            reject(new Error("Google API가 로드되지 않습니다. 페이지를 새로고침하고 다시 시도하세요."))
+        if (typeof gapi === "undefined") {
+            console.error("Google API(gapi)가 정의되지 않았습니다.")
+            reject(new Error("Google API가 로드되지 않았습니다."))
+            return
+        }
+
+        if (!gapi.client) {
+            console.error("gapi.client가 정의되지 않았습니다.")
+            reject(new Error("Google API 클라이언트가 초기화되지 않았습니다."))
+            return
+        }
+
+        if (!gapi.client.sheets) {
+            console.error("gapi.client.sheets가 정의되지 않았습니다.")
+            reject(new Error("Google Sheets API가 로드되지 않았습니다."))
             return
         }
 
@@ -202,6 +227,13 @@ function initSheetsAPI() {
             return
         }
 
+        // gapi.client가 이미 초기화되었는지 확인
+        if (gapi.client && gapi.client.sheets) {
+            console.log("Google Sheets API가 이미 초기화되어 있습니다.")
+            resolve()
+            return
+        }
+
         gapi.load("client:auth2", () => {
             console.log("gapi.client 로드 완료")
 
@@ -214,6 +246,28 @@ function initSheetsAPI() {
                 })
                 .then(() => {
                     console.log("Google Sheets API 초기화 완료")
+
+                    // 사용자 인증 확인
+                    if (gapi.auth2) {
+                        const authInstance = gapi.auth2.getAuthInstance()
+                        if (authInstance) {
+                            const isSignedIn = authInstance.isSignedIn.get()
+                            if (!isSignedIn) {
+                                console.log("사용자가 로그인되어 있지 않습니다. 로그인 시도...")
+                                return authInstance
+                                    .signIn()
+                                    .then(() => {
+                                        console.log("사용자 로그인 성공")
+                                        resolve()
+                                    })
+                                    .catch((error) => {
+                                        console.error("사용자 로그인 실패:", error)
+                                        reject(error)
+                                    })
+                            }
+                        }
+                    }
+
                     resolve()
                 })
                 .catch((error) => {
@@ -229,8 +283,12 @@ async function registerUserToSpreadsheet(userData) {
     try {
         console.log("스프레드시트에 사용자 등록 시작:", userData)
 
+        if (!userData || !userData.name || !userData.email) {
+            throw new Error("사용자 정보가 올바르지 않습니다.")
+        }
+
         // 관리자 스프레드시트에 사용자 정보 추가
-        return await addUserToSpreadsheet(userData.name, userData.email, userData.phone, userData.address)
+        return await addUserToSpreadsheet(userData.name, userData.email, userData.phone || "", userData.address || "")
     } catch (error) {
         console.error("사용자 등록 오류:", error)
         throw error

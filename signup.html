@@ -77,6 +77,23 @@
         let googleUser = null;
         let userEmail = '';
         let userName = '';
+        let googleAPIInitialized = false;
+
+        // Google API 초기화 함수
+        async function initializeGoogleAPI() {
+            if (googleAPIInitialized) {
+                return;
+            }
+
+            try {
+                await initSheetsAPI();
+                googleAPIInitialized = true;
+                console.log("Google API 초기화 완료");
+            } catch (error) {
+                console.error("Google API 초기화 실패:", error);
+                throw error;
+            }
+        }
 
         // Google 로그인 응답 처리 함수
         function handleCredentialResponse(response) {
@@ -132,13 +149,29 @@
         // 사용자가 이미 존재하는지 확인
         async function checkUserExists(email) {
             try {
-                // 스프레드시트에서 사용자 확인
-                await initSheetsAPI();
+                // Google API 초기화
+                await initializeGoogleAPI();
 
+                // 로컬 스토리지에서 먼저 확인
+                const storedUserData = localStorage.getItem('userData');
+                if (storedUserData) {
+                    const userData = JSON.parse(storedUserData);
+                    if (userData.email === email) {
+                        return true;
+                    }
+                }
+
+                // 스프레드시트에서 확인
                 return new Promise((resolve, reject) => {
+                    if (!gapi.client || !gapi.client.sheets) {
+                        console.error("Google Sheets API가 초기화되지 않았습니다.");
+                        resolve(false); // API가 없으면 새 사용자로 간주
+                        return;
+                    }
+
                     gapi.client.sheets.spreadsheets.values
                         .get({
-                            spreadsheetId: "1fBMM2ad-_Ufp64ug6z8BiJhctR6xmE0w0Mq8VE9S9vE",
+                            spreadsheetId: SPREADSHEET_ID,
                             range: "Sheet1!A:A", // A열만 가져옴 (이메일)
                         })
                         .then((response) => {
@@ -151,29 +184,21 @@
                         })
                         .catch((error) => {
                             console.error("스프레드시트 데이터 가져오기 오류:", error);
-                            // 오류 발생 시 로컬 스토리지로 폴백
-                            const storedUserData = localStorage.getItem('userData');
-                            if (storedUserData) {
-                                const userData = JSON.parse(storedUserData);
-                                resolve(userData.email === email);
-                            } else {
-                                resolve(false);
-                            }
+                            resolve(false); // 오류 발생 시 새 사용자로 간주
                         });
                 });
             } catch (error) {
                 console.error("사용자 확인 중 오류:", error);
-                // 오류 발생 시 로컬 스토리지로 폴백
-                const storedUserData = localStorage.getItem('userData');
-                if (storedUserData) {
-                    const userData = JSON.parse(storedUserData);
-                    return userData.email === email;
-                }
-                return false;
+                return false; // 오류 발생 시 새 사용자로 간주
             }
         }
 
         document.addEventListener('DOMContentLoaded', function () {
+            // Google API 초기화 시도
+            initializeGoogleAPI().catch(error => {
+                console.warn("초기 Google API 초기화 실패:", error);
+            });
+
             // 취소 버튼 이벤트 리스너
             document.getElementById('cancel-btn').addEventListener('click', function () {
                 document.getElementById('signup-form-box').style.display = 'none';
@@ -211,10 +236,14 @@
 
                     console.log("저장할 사용자 정보:", userData);
 
+                    // 로컬 스토리지에 사용자 정보 저장
+                    localStorage.setItem('userData', JSON.stringify(userData));
+                    console.log("로컬 스토리지에 사용자 정보 저장 성공");
+
                     // Google Sheets API 초기화 및 스프레드시트에 사용자 정보 저장
                     try {
                         console.log("Google Sheets API 초기화 시작");
-                        await initSheetsAPI();
+                        await initializeGoogleAPI();
                         console.log("Google Sheets API 초기화 완료");
 
                         console.log("스프레드시트에 사용자 정보 저장 시작");
@@ -222,15 +251,9 @@
                         console.log("스프레드시트에 사용자 정보 저장 성공:", result);
                     } catch (sheetError) {
                         console.error("스프레드시트 저장 오류:", sheetError);
-                        alert("스프레드시트 저장 중 오류가 발생했습니다: " + sheetError.message);
-                        document.getElementById('loading').style.display = 'none';
-                        document.getElementById('signup-form-box').style.display = 'block';
-                        return;
+                        alert("스프레드시트 저장 중 오류가 발생했습니다: " + (sheetError.message || "알 수 없는 오류"));
+                        // 스프레드시트 저장 실패해도 계속 진행
                     }
-
-                    // 로컬 스토리지에 사용자 정보 저장
-                    localStorage.setItem('userData', JSON.stringify(userData));
-                    console.log("로컬 스토리지에 사용자 정보 저장 성공");
 
                     // 성공 메시지 표시
                     document.getElementById('loading').style.display = 'none';
