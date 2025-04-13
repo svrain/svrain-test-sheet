@@ -35,6 +35,7 @@ function initGAPIClient() {
                         "https://www.googleapis.com/discovery/v1/apis/drive/v3/rest",
                     ],
                     scope: "https://www.googleapis.com/auth/spreadsheets https://www.googleapis.com/auth/drive",
+                    prompt: "consent", // 항상 동의 화면 표시
                 })
                 .then(() => {
                     console.log("Google API 초기화 완료")

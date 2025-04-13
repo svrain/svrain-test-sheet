@@ -258,7 +258,10 @@ function initSheetsAPI() {
                             if (!isSignedIn) {
                                 console.log("사용자가 로그인되어 있지 않습니다. 로그인 시도...")
                                 return authInstance
-                                    .signIn()
+                                    .signIn({
+                                        prompt: "consent", // 항상 동의 화면 표시
+                                        scope: "https://www.googleapis.com/auth/spreadsheets https://www.googleapis.com/auth/drive",
+                                    })
                                     .then(() => {
                                         console.log("사용자 로그인 성공")
                                         resolve()
