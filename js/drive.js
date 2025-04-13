@@ -113,7 +113,7 @@ async function createSpreadsheet(name, email, phone, address) {
 }
 
 // 관리자 스프레드시트에 사용자 정보 추가
-async function addUserToSpreadsheet(name, email, phone, address) {
+async function addUserToSpreadsheet(name, email) {
     return new Promise((resolve, reject) => {
         console.log("스프레드시트에 사용자 추가 시작:", name, email)
 

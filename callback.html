@@ -1,14 +1,40 @@
 <!DOCTYPE html>
-<html lang="en">
-
+<html lang="ko">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Document</title>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>인증 처리 중...</title>
+  <link rel="stylesheet" href="css/style.css">
+  <script src="js/auth.js"></script>
 </head>
-
 <body>
+  <div class="container">
+    <div class="content-box">
+      <div class="loader"></div>
+      <h2>인증 처리 중입니다...</h2>
+      <p>잠시만 기다려주세요. 자동으로 리디렉션됩니다.</p>
+    </div>
+  </div>
 
+  <script>
+    document.addEventListener('DOMContentLoaded', function() {
+      // URL에서 인증 코드 또는 토큰 추출
+      const urlParams = new URLSearchParams(window.location.search);
+      const code = urlParams.get('code');
+      
+      if (code) {
+        // 코드 저장
+        sessionStorage.setItem('authCode', code);
+        
+        // 인증 완료 후 메인 페이지로 리디렉션
+        window.location.href = 'index.html';
+      } else {
+        // 오류 처리
+        console.error('인증 코드를 받지 못했습니다');
+        alert('인증에 실패했습니다. 다시 시도해주세요.');
+        window.location.href = 'login.html';
+      }
+    });
+  </script>
 </body>
-
 </html>
