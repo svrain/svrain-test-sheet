@@ -4,7 +4,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>google drive api</title>
+    <title>시험 순위 확인 사이트</title>
     <link rel="stylesheet" href="css/style.css">
     <script src="js/auth.js"></script>
 </head>
@@ -23,14 +23,10 @@
         <div id="logged-in" class="content-box" style="display: none;">
             <h2>환영합니다! <span id="user-name"></span>님</h2>
             <p>성공적으로 로그인되었습니다.</p>
-            <div class="profile-info">
-                <div class="profile-details">
-                    <p><strong>이메일:</strong> <span id="user-email"></span></p>
-                    <p><strong>전화번호:</strong> <span id="user-phone"></span></p>
-                    <p><strong>주소:</strong> <span id="user-address"></span></p>
-                </div>
+            <div class="button-group">
+                <a href="profile.html" class="button">내 프로필</a>
+                <button id="logout-button" class="button">로그아웃</button>
             </div>
-            <button id="logout-button" class="button">로그아웃</button>
         </div>
     </div>
 

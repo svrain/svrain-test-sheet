@@ -56,16 +56,9 @@ function checkLoginStatus() {
         // 사용자 정보 가져오기
         const userData = JSON.parse(localStorage.getItem("userData"))
         if (userData) {
-            // 사용자 정보 표시
+            // 사용자 이름만 표시
             const userNameElement = document.getElementById("user-name")
-            const userEmailElement = document.getElementById("user-email")
-            const userPhoneElement = document.getElementById("user-phone")
-            const userAddressElement = document.getElementById("user-address")
-
             if (userNameElement) userNameElement.textContent = userData.name
-            if (userEmailElement) userEmailElement.textContent = userData.email
-            if (userPhoneElement) userPhoneElement.textContent = userData.phone
-            if (userAddressElement) userAddressElement.textContent = userData.address
         }
     } else {
         // 로그아웃 상태 UI 표시

@@ -30,8 +30,11 @@ function initGAPIClient() {
                 .init({
                     apiKey: "AIzaSyDsrXQm1ch1H3OIQJWUjUnDMfF_yVboKtQ",
                     clientId: "396207225030-154qdg1rqog8s809t5ud19clqfq1o6gn.apps.googleusercontent.com",
-                    discoveryDocs: ["https://sheets.googleapis.com/$discovery/rest?version=v4"],
-                    scope: "https://www.googleapis.com/auth/spreadsheets",
+                    discoveryDocs: [
+                        "https://sheets.googleapis.com/$discovery/rest?version=v4",
+                        "https://www.googleapis.com/discovery/v1/apis/drive/v3/rest",
+                    ],
+                    scope: "https://www.googleapis.com/auth/spreadsheets https://www.googleapis.com/auth/drive",
                 })
                 .then(() => {
                     console.log("Google API 초기화 완료")

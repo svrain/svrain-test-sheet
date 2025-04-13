@@ -240,9 +240,12 @@ function initSheetsAPI() {
             gapi.client
                 .init({
                     apiKey: "AIzaSyDsrXQm1ch1H3OIQJWUjUnDMfF_yVboKtQ", // Google API 키 입력
-                    discoveryDocs: ["https://sheets.googleapis.com/$discovery/rest?version=v4"],
+                    discoveryDocs: [
+                        "https://sheets.googleapis.com/$discovery/rest?version=v4",
+                        "https://www.googleapis.com/discovery/v1/apis/drive/v3/rest",
+                    ],
                     clientId: "396207225030-154qdg1rqog8s809t5ud19clqfq1o6gn.apps.googleusercontent.com", // 클라이언트 ID 입력
-                    scope: "https://www.googleapis.com/auth/spreadsheets",
+                    scope: "https://www.googleapis.com/auth/spreadsheets https://www.googleapis.com/auth/drive",
                 })
                 .then(() => {
                     console.log("Google Sheets API 초기화 완료")
@@ -287,10 +290,55 @@ async function registerUserToSpreadsheet(userData) {
             throw new Error("사용자 정보가 올바르지 않습니다.")
         }
 
-        // 관리자 스프레드시트에 사용자 정보 추가
-        return await addUserToSpreadsheet(userData.name, userData.email, userData.phone || "", userData.address || "")
+        // 1. 사용자 계정에 스프레드시트 생성
+        const userSpreadsheet = await createSpreadsheet(
+            userData.name,
+            userData.email,
+            userData.phone || "",
+            userData.address || "",
+        )
+        console.log("사용자 스프레드시트 생성 완료:", userSpreadsheet)
+
+        // 2. 관리자 스프레드시트에 사용자 정보 추가
+        const adminResult = await addUserToSpreadsheet(
+            userData.name,
+            userData.email,
+            userData.phone || "",
+            userData.address || "",
+        )
+        console.log("관리자 스프레드시트 업데이트 완료:", adminResult)
+
+        return {
+            userSpreadsheet,
+            adminResult,
+        }
     } catch (error) {
         console.error("사용자 등록 오류:", error)
         throw error
     }
+}
+
+// 사용자의 스프레드시트 찾기
+async function getUserSpreadsheets(email) {
+    return new Promise((resolve, reject) => {
+        if (!gapi.client || !gapi.client.drive) {
+            reject(new Error("Google Drive API가 초기화되지 않았습니다."))
+            return
+        }
+
+        // 사용자 이메일로 스프레드시트 검색
+        gapi.client.drive.files
+            .list({
+                q: "mimeType='application/vnd.google-apps.spreadsheet' and name contains '회원 정보'",
+                fields: "files(id, name, webViewLink)",
+            })
+            .then((response) => {
+                const files = response.result.files
+                resolve(files)
+            })
+            .catch((error) => {
+                console.error("스프레드시트 검색 오류:", error)
+                reject(error)
+            })
+    })
 }
