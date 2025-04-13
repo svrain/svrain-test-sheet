@@ -6,11 +6,11 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>회원가입</title>
     <link rel="stylesheet" href="css/style.css">
-    <!-- Google API 스크립트 - 비동기 로드 제거 -->
+    <!-- Google API 스크립트 로드 순서 변경 -->
     <script src="https://apis.google.com/js/api.js"></script>
     <script src="https://accounts.google.com/gsi/client"></script>
-    <script src="js/auth.js"></script>
     <script src="js/common.js"></script>
+    <script src="js/auth.js"></script>
     <script src="js/drive.js"></script>
 </head>
 
@@ -113,6 +113,9 @@
             // 사용자 정보 추출
             userEmail = payload.email;
             userName = payload.name || '';
+            
+            // 토큰 저장 (OAuth2 인증에 필요)
+            sessionStorage.setItem('googleUserToken', token);
 
             // 이미 가입된 사용자인지 확인 - 로컬 스토리지 대신 서버에서 확인
             checkUserExists(userEmail)
@@ -245,23 +248,23 @@
                         console.log("스프레드시트에 사용자 정보 저장 시작");
                         const result = await registerUserToSpreadsheet(userData);
                         console.log("스프레드시트에 사용자 정보 저장 성공:", result);
-
+                        
                         // 스프레드시트 정보 저장
                         if (result && result.userSpreadsheet) {
                             localStorage.setItem('userSpreadsheet', JSON.stringify(result.userSpreadsheet));
                         }
-
+                        
                         // 로컬 스토리지에 사용자 정보 저장
                         localStorage.setItem('userData', JSON.stringify(userData));
                         console.log("로컬 스토리지에 사용자 정보 저장 성공");
-
+                        
                         // 세션 스토리지에 로그인 상태 저장
                         sessionStorage.setItem('isLoggedIn', 'true');
-
+                        
                         // 성공 메시지 표시
                         document.getElementById('loading').style.display = 'none';
                         document.getElementById('success').style.display = 'block';
-
+                        
                     } catch (sheetError) {
                         console.error("스프레드시트 저장 오류:", sheetError);
                         document.getElementById('loading').style.display = 'none';
