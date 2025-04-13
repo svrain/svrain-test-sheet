@@ -6,8 +6,9 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>login api</title>
     <link rel="stylesheet" href="css/style.css">
-    <!-- Google API 스크립트 -->
-    <script src="https://accounts.google.com/gsi/client" async defer></script>
+    <!-- Google API 스크립트 - 비동기 로드 제거 -->
+    <script src="https://apis.google.com/js/api.js"></script>
+    <script src="https://accounts.google.com/gsi/client"></script>
     <script src="js/auth.js"></script>
     <script src="js/common.js"></script>
 </head>
@@ -20,12 +21,19 @@
             <div class="button-group">
                 <!-- Google ID 로그인 버튼 컨테이너 -->
                 <div id="g_id_onload"
-                    data-client_id="396207225030-154qdg1rqog8s809t5ud19clqfq1o6gn.apps.googleusercontent.com"
-                    data-context="signin" data-ux_mode="popup" data-callback="handleCredentialResponse"
-                    data-auto_prompt="false">
+                     data-client_id="396207225030-154qdg1rqog8s809t5ud19clqfq1o6gn.apps.googleusercontent.com"
+                     data-context="signin"
+                     data-ux_mode="popup"
+                     data-callback="handleCredentialResponse"
+                     data-auto_prompt="false">
                 </div>
-                <div class="g_id_signin" data-type="standard" data-shape="rectangular" data-theme="outline"
-                    data-text="signin_with" data-size="large" data-logo_alignment="left">
+                <div class="g_id_signin"
+                     data-type="standard"
+                     data-shape="rectangular"
+                     data-theme="outline"
+                     data-text="signin_with"
+                     data-size="large"
+                     data-logo_alignment="left">
                 </div>
             </div>
             <p class="small-text">회원가입 시 사용한 Google 계정으로 로그인해야 합니다.</p>
@@ -42,50 +50,112 @@
         // Google 로그인 응답 처리 함수
         function handleCredentialResponse(response) {
             console.log("Google 로그인 응답:", response);
-
+            
             // 로딩 표시
             document.getElementById('login-box').style.display = 'none';
             document.getElementById('loading').style.display = 'block';
-
+            
             // JWT 토큰 디코딩 (base64)
             const token = response.credential;
             const base64Url = token.split('.')[1];
             const base64 = base64Url.replace(/-/g, '+').replace(/_/g, '/');
-            const jsonPayload = decodeURIComponent(atob(base64).split('').map(function (c) {
+            const jsonPayload = decodeURIComponent(atob(base64).split('').map(function(c) {
                 return '%' + ('00' + c.charCodeAt(0).toString(16)).slice(-2);
             }).join(''));
-
+            
             const payload = JSON.parse(jsonPayload);
             console.log("디코딩된 페이로드:", payload);
-
+            
             // 사용자 정보 추출
             const email = payload.email;
-
-            // 로컬 스토리지에서 사용자 정보 확인
-            const storedUserData = localStorage.getItem('userData');
-
-            if (storedUserData) {
-                const userData = JSON.parse(storedUserData);
-
-                // 이메일 일치하는지 확인
-                if (userData.email === email) {
-                    // 로그인 성공
-                    sessionStorage.setItem('isLoggedIn', 'true');
-                    window.location.href = 'index.html';
-                } else {
-                    // 다른 계정으로 로그인
-                    alert('회원가입 시 사용한 Google 계정으로 로그인해야 합니다.');
+            
+            // 사용자 확인 - 스프레드시트에서 확인
+            checkUserExists(email)
+                .then(exists => {
+                    if (exists) {
+                        // 로그인 성공
+                        sessionStorage.setItem('isLoggedIn', 'true');
+                        
+                        // 로컬 스토리지에서 사용자 정보 가져오기
+                        const storedUserData = localStorage.getItem('userData');
+                        if (storedUserData) {
+                            const userData = JSON.parse(storedUserData);
+                            if (userData.email !== email) {
+                                // 로컬 스토리지의 이메일과 다른 경우 업데이트
+                                userData.email = email;
+                                localStorage.setItem('userData', JSON.stringify(userData));
+                            }
+                        } else {
+                            // 로컬 스토리지에 정보가 없는 경우 기본 정보 저장
+                            const userData = {
+                                name: payload.name || '',
+                                email: email,
+                                phone: '',
+                                address: ''
+                            };
+                            localStorage.setItem('userData', JSON.stringify(userData));
+                        }
+                        
+                        window.location.href = 'index.html';
+                    } else {
+                        // 회원가입되지 않은 계정
+                        alert('회원가입되지 않은 계정입니다. 회원가입 페이지로 이동합니다.');
+                        window.location.href = 'signup.html';
+                    }
+                })
+                .catch(error => {
+                    console.error("사용자 확인 오류:", error);
+                    alert('로그인 중 오류가 발생했습니다: ' + error.message);
                     document.getElementById('loading').style.display = 'none';
                     document.getElementById('login-box').style.display = 'block';
+                });
+        }
+        
+        // 사용자가 이미 존재하는지 확인
+        async function checkUserExists(email) {
+            try {
+                // 스프레드시트에서 사용자 확인
+                await initSheetsAPI();
+                
+                return new Promise((resolve, reject) => {
+                    gapi.client.sheets.spreadsheets.values
+                        .get({
+                            spreadsheetId: "1fBMM2ad-_Ufp64ug6z8BiJhctR6xmE0w0Mq8VE9S9vE",
+                            range: "Sheet1!A:A", // A열만 가져옴 (이메일)
+                        })
+                        .then((response) => {
+                            const values = response.result.values || [];
+                            // 첫 번째 행은 헤더이므로 제외하고 검색
+                            const emails = values.slice(1).map(row => row[0]);
+                            const exists = emails.includes(email);
+                            console.log("사용자 확인 결과:", email, exists ? "존재함" : "존재하지 않음");
+                            resolve(exists);
+                        })
+                        .catch((error) => {
+                            console.error("스프레드시트 데이터 가져오기 오류:", error);
+                            // 오류 발생 시 로컬 스토리지로 폴백
+                            const storedUserData = localStorage.getItem('userData');
+                            if (storedUserData) {
+                                const userData = JSON.parse(storedUserData);
+                                resolve(userData.email === email);
+                            } else {
+                                resolve(false);
+                            }
+                        });
+                });
+            } catch (error) {
+                console.error("사용자 확인 중 오류:", error);
+                // 오류 발생 시 로컬 스토리지로 폴백
+                const storedUserData = localStorage.getItem('userData');
+                if (storedUserData) {
+                    const userData = JSON.parse(storedUserData);
+                    return userData.email === email;
                 }
-            } else {
-                // 회원가입되지 않은 계정
-                alert('회원가입되지 않은 계정입니다. 회원가입 페이지로 이동합니다.');
-                window.location.href = 'signup.html';
+                return false;
             }
         }
 
-        document.addEventListener('DOMContentLoaded', function () {
+        document.addEventListener('DOMContentLoaded', function() {
             // 이미 로그인되어 있는지 확인
             if (isLoggedIn()) {
                 window.location.href = 'index.html';
