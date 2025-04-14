@@ -6,11 +6,11 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>회원가입</title>
     <link rel="stylesheet" href="css/style.css">
-    <script src="https://apis.google.com/js/platform.js" async defer></script>
+    <!-- Google API 스크립트 -->
     <script src="https://apis.google.com/js/api.js"></script>
-    <script src="js/auth.js"></script>
-    <script src="js/common.js"></script>
-    <script src="js/drive.js"></script>
+    <script src="https://apis.google.com/js/platform.js" async defer></script>
+    <meta name="google-signin-client_id"
+        content="396207225030-154qdg1rqog8s809t5ud19clqfq1o6gn.apps.googleusercontent.com">
 </head>
 
 <body>
@@ -20,7 +20,8 @@
         <div id="google-signin-box" class="content-box">
             <p>Google 계정으로 로그인하세요.</p>
             <div class="button-group">
-                <button id="google-signin-btn" class="button">Google 계정으로 가입하기</button>
+                <!-- Google 로그인 버튼 -->
+                <div class="g-signin2" data-onsuccess="onSignIn" data-theme="dark"></div>
             </div>
             <p class="small-text">Google 계정으로 간편하게 회원가입하세요.</p>
             <p>이미 회원이신가요? <a href="login.html">로그인</a></p>
@@ -57,203 +58,152 @@
     <script>
         let userEmail = '';
         let userName = '';
-        let googleAPIInitialized = false;
+        let userProfile = null;
 
-        // Google API 초기화 함수
-        async function initializeGoogleAPI() {
-            if (googleAPIInitialized) {
-                return;
-            }
-
+        // Google 로그인 성공 콜백
+        function onSignIn(googleUser) {
             try {
-                await initGapi();
-                googleAPIInitialized = true;
-                console.log("Google API 초기화 완료");
-            } catch (error) {
-                console.error("Google API 초기화 실패:", error);
-                throw error;
-            }
-        }
-
-        // Google 로그인 처리 함수
-        async function handleGoogleSignIn() {
-            try {
+                // 로딩 표시
                 document.getElementById('google-signin-box').style.display = 'none';
                 document.getElementById('loading').style.display = 'block';
 
-                await initializeGoogleAPI();
+                // 사용자 프로필 정보 가져오기
+                userProfile = googleUser.getBasicProfile();
+                userEmail = userProfile.getEmail();
+                userName = userProfile.getName();
 
-                const auth2 = gapi.auth2.getAuthInstance();
-                const googleUser = await auth2.signIn({
-                    prompt: 'select_account'
-                });
-
-                const profile = googleUser.getBasicProfile();
-                userEmail = profile.getEmail();
-                userName = profile.getName();
-
-                // 액세스 토큰 저장
-                const authResponse = googleUser.getAuthResponse(true);
-                try {
-                    sessionStorage.setItem('googleAccessToken', authResponse.access_token);
-                } catch (error) {
-                    console.error("세션 스토리지 저장 오류:", error);
-                }
+                console.log("Google 로그인 성공:", userEmail);
 
                 // 이미 가입된 사용자인지 확인
-                const exists = await checkUserExists(userEmail);
+                checkUserExists(userEmail)
+                    .then(exists => {
+                        if (exists) {
+                            alert('이미 가입된 계정입니다. 로그인 페이지로 이동합니다.');
+                            signOut();
+                            window.location.href = 'login.html';
+                        } else {
+                            // 이메일 표시
+                            document.getElementById('user-email').textContent = userEmail;
+                            // 이름 필드에 구글 이름 미리 채우기
+                            document.getElementById('name').value = userName;
 
-                if (exists) {
-                    alert('이미 가입된 계정입니다. 로그인 페이지로 이동합니다.');
-                    window.location.href = 'login.html';
-                } else {
-                    // 이메일 표시
-                    document.getElementById('user-email').textContent = userEmail;
-                    // 이름 필드에 구글 이름 미리 채우기
-                    document.getElementById('name').value = userName;
-
-                    // 폼 표시
-                    document.getElementById('loading').style.display = 'none';
-                    document.getElementById('signup-form-box').style.display = 'block';
-                }
+                            // 폼 표시
+                            document.getElementById('loading').style.display = 'none';
+                            document.getElementById('signup-form-box').style.display = 'block';
+                        }
+                    })
+                    .catch(error => {
+                        console.error("사용자 확인 오류:", error);
+                        alert('사용자 확인 중 오류가 발생했습니다. 다시 시도해주세요.');
+                        signOut();
+                        document.getElementById('loading').style.display = 'none';
+                        document.getElementById('google-signin-box').style.display = 'block';
+                    });
             } catch (error) {
-                console.error("Google 로그인 오류:", error);
-                alert("Google 로그인 중 오류가 발생했습니다: " + (error.message || "알 수 없는 오류"));
+                console.error("Google 로그인 처리 오류:", error);
+                alert('Google 로그인 처리 중 오류가 발생했습니다. 다시 시도해주세요.');
                 document.getElementById('loading').style.display = 'none';
                 document.getElementById('google-signin-box').style.display = 'block';
             }
         }
 
-        // 사용자가 이미 존재하는지 확인
-        async function checkUserExists(email) {
+        // Google 로그아웃
+        function signOut() {
             try {
-                // 로컬 스토리지에서 먼저 확인
-                const storedUserData = localStorage.getItem('userData');
-                if (storedUserData) {
-                    const userData = JSON.parse(storedUserData);
-                    if (userData.email === email) {
-                        return true;
+                const auth2 = gapi.auth2.getAuthInstance();
+                if (auth2) {
+                    auth2.signOut().then(() => {
+                        console.log('User signed out.');
+                    });
+                }
+            } catch (error) {
+                console.error("로그아웃 오류:", error);
+            }
+        }
+
+        // 사용자가 이미 존재하는지 확인
+        function checkUserExists(email) {
+            return new Promise((resolve, reject) => {
+                try {
+                    // 로컬 스토리지에서 먼저 확인
+                    const storedUserData = localStorage.getItem('userData');
+                    if (storedUserData) {
+                        const userData = JSON.parse(storedUserData);
+                        if (userData.email === email) {
+                            return resolve(true);
+                        }
                     }
+
+                    // 간단하게 처리 - 실제로는 서버에서 확인해야 함
+                    // 여기서는 로컬 스토리지만 확인하고 넘어감
+                    resolve(false);
+                } catch (error) {
+                    console.error("사용자 확인 중 오류:", error);
+                    reject(error);
+                }
+            });
+        }
+
+        // 폼 제출 처리
+        function handleFormSubmit(e) {
+            e.preventDefault();
+
+            if (!userEmail || !userProfile) {
+                alert('Google 로그인이 필요합니다.');
+                document.getElementById('signup-form-box').style.display = 'none';
+                document.getElementById('google-signin-box').style.display = 'block';
+                return;
+            }
+
+            // 폼 데이터 가져오기
+            const name = document.getElementById('name').value;
+
+            // 로딩 표시
+            document.getElementById('signup-form-box').style.display = 'none';
+            document.getElementById('loading').style.display = 'block';
+
+            try {
+                // 사용자 정보 저장
+                const userData = {
+                    name: name,
+                    email: userEmail,
+                    id: userProfile.getId(),
+                    imageUrl: userProfile.getImageUrl()
+                };
+
+                console.log("저장할 사용자 정보:", userData);
+
+                // 로컬 스토리지에 사용자 정보 저장
+                localStorage.setItem('userData', JSON.stringify(userData));
+
+                // 세션 스토리지에 로그인 상태 저장
+                try {
+                    sessionStorage.setItem('isLoggedIn', 'true');
+                } catch (error) {
+                    console.error("세션 스토리지 저장 오류:", error);
                 }
 
-                // Google API 초기화
-                await initSheetsAPI();
-
-                // 스프레드시트에서 확인
-                return new Promise((resolve, reject) => {
-                    if (!gapi.client || !gapi.client.sheets) {
-                        console.error("Google Sheets API가 초기화되지 않았습니다.");
-                        resolve(false); // API가 없으면 새 사용자로 간주
-                        return;
-                    }
-
-                    gapi.client.sheets.spreadsheets.values
-                        .get({
-                            spreadsheetId: SPREADSHEET_ID,
-                            range: "Sheet1!A:A", // A열만 가져옴 (이메일)
-                        })
-                        .then((response) => {
-                            const values = response.result.values || [];
-                            // 첫 번째 행은 헤더이므로 제외하고 검색
-                            const emails = values.slice(1).map(row => row[0]);
-                            const exists = emails.includes(email);
-                            console.log("사용자 확인 결과:", email, exists ? "존재함" : "존재하지 않음");
-                            resolve(exists);
-                        })
-                        .catch((error) => {
-                            console.error("스프레드시트 데이터 가져오기 오류:", error);
-                            resolve(false); // 오류 발생 시 새 사용자로 간주
-                        });
-                });
+                // 성공 메시지 표시
+                document.getElementById('loading').style.display = 'none';
+                document.getElementById('success').style.display = 'block';
             } catch (error) {
-                console.error("사용자 확인 중 오류:", error);
-                return false; // 오류 발생 시 새 사용자로 간주
+                console.error('회원가입 오류:', error);
+                alert('회원가입 중 오류가 발생했습니다. 다시 시도해주세요.');
+                document.getElementById('loading').style.display = 'none';
+                document.getElementById('signup-form-box').style.display = 'block';
             }
         }
 
         document.addEventListener('DOMContentLoaded', function () {
-            // Google 로그인 버튼 이벤트 리스너
-            document.getElementById('google-signin-btn').addEventListener('click', handleGoogleSignIn);
-
             // 취소 버튼 이벤트 리스너
             document.getElementById('cancel-btn').addEventListener('click', function () {
+                signOut();
                 document.getElementById('signup-form-box').style.display = 'none';
                 document.getElementById('google-signin-box').style.display = 'block';
             });
 
             // 폼 제출 이벤트 리스너
-            document.getElementById('signup-form').addEventListener('submit', async function (e) {
-                e.preventDefault();
-
-                if (!userEmail) {
-                    alert('Google 로그인이 필요합니다.');
-                    document.getElementById('signup-form-box').style.display = 'none';
-                    document.getElementById('google-signin-box').style.display = 'block';
-                    return;
-                }
-
-                // 폼 데이터 가져오기
-                const name = document.getElementById('name').value;
-
-                // 로딩 표시
-                document.getElementById('signup-form-box').style.display = 'none';
-                document.getElementById('loading').style.display = 'block';
-
-                try {
-                    // 사용자 정보 저장
-                    const userData = {
-                        name: name,
-                        email: userEmail
-                    };
-
-                    console.log("저장할 사용자 정보:", userData);
-
-                    // Google Sheets API 초기화 및 스프레드시트에 사용자 정보 저장
-                    try {
-                        console.log("Google Sheets API 초기화 시작");
-                        await initSheetsAPI();
-                        console.log("Google Sheets API 초기화 완료");
-
-                        console.log("스프레드시트에 사용자 정보 저장 시작");
-                        const result = await registerUserToSpreadsheet(userData);
-                        console.log("스프레드시트에 사용자 정보 저장 성공:", result);
-
-                        // 스프레드시트 정보 저장
-                        if (result && result.userSpreadsheet) {
-                            localStorage.setItem('userSpreadsheet', JSON.stringify(result.userSpreadsheet));
-                        }
-
-                        // 로컬 스토리지에 사용자 정보 저장
-                        localStorage.setItem('userData', JSON.stringify(userData));
-                        console.log("로컬 스토리지에 사용자 정보 저장 성공");
-
-                        // 세션 스토리지에 로그인 상태 저장
-                        try {
-                            sessionStorage.setItem('isLoggedIn', 'true');
-                        } catch (error) {
-                            console.error("세션 스토리지 저장 오류:", error);
-                        }
-
-                        // 성공 메시지 표시
-                        document.getElementById('loading').style.display = 'none';
-                        document.getElementById('success').style.display = 'block';
-
-                    } catch (sheetError) {
-                        console.error("스프레드시트 저장 오류:", sheetError);
-                        document.getElementById('loading').style.display = 'none';
-                        document.getElementById('signup-form-box').style.display = 'block';
-                        alert("스프레드시트 저장 중 오류가 발생했습니다: " + (sheetError.message || "알 수 없는 오류"));
-                        // 스프레드시트 저장 실패 시 회원가입 중단
-                        return;
-                    }
-
-                } catch (error) {
-                    console.error('회원가입 오류:', error);
-                    alert('회원가입 중 오류가 발생했습니다: ' + (error.message || '알 수 없는 오류'));
-                    document.getElementById('loading').style.display = 'none';
-                    document.getElementById('signup-form-box').style.display = 'block';
-                }
-            });
+            document.getElementById('signup-form').addEventListener('submit', handleFormSubmit);
         });
     </script>
 </body>
