@@ -19,6 +19,9 @@ function initGapi() {
                 gapi.auth2
                     .init({
                         client_id: "396207225030-154qdg1rqog8s809t5ud19clqfq1o6gn.apps.googleusercontent.com",
+                        scope: "https://www.googleapis.com/auth/spreadsheets https://www.googleapis.com/auth/drive",
+                        ux_mode: "popup",
+                        redirect_uri: "https://svrain.github.io/svrain-test-sheet/callback.html",
                     })
                     .then(
                         (authInstance) => {
@@ -40,13 +43,13 @@ function initGapi() {
 
 // 로그인 상태 확인
 function isLoggedIn() {
-    return sessionStorage.getItem("isLoggedIn") === "true"
+    return sessionStroage.getItem("isLoggedIn") === "true"
 }
 
 // 로그인 상태 체크 및 UI 업데이트
 function checkLoginStatus() {
     if (isLoggedIn()) {
-        // 로그인 상태 UI 표시
+        // 로그인 상태 UI
         const loggedOutElement = document.getElementById("logged-out")
         const loggedInElement = document.getElementById("logged-in")
 
@@ -54,11 +57,11 @@ function checkLoginStatus() {
         if (loggedInElement) loggedInElement.style.display = "block"
 
         // 사용자 정보 가져오기
-        const userData = JSON.parse(localStorage.getItem("userData"))
+        const userData = JSON.parse(localStorage.getItem("userData") || "{}")
         if (userData) {
             // 사용자 이름만 표시
             const userNameElement = document.getElementById("user-name")
-            if (userNameElement) userNameElement.textContent = userData.name
+            if (userNameElement) userNameElement.textContent = userData.name || ""
         }
     } else {
         // 로그아웃 상태 UI 표시
@@ -72,38 +75,26 @@ function checkLoginStatus() {
 
 // 로그아웃
 function logout() {
+    // 세션 스토리지 초기화
+    sessionStorage.removeItem("isLoggedIn")
+    sessionStorage.removeItem("googleUserId")
+    sessionStorage.removeItem("googleUserEmail")
+    sessionStorage.removeItem("googleUserName")
+    sessionStorage.removeItem("googleUserToken")
+    sessionStorage.removeItem("googleAccessToken")
     // Google 로그아웃
     if (typeof gapi !== "undefined" && gapi.auth2) {
         const auth2 = gapi.auth2.getAuthInstance()
         if (auth2) {
             auth2.signOut().then(() => {
                 console.log("User signed out.")
-                // 세션 스토리지 초기화
-                sessionStorage.removeItem("isLoggedIn")
-                sessionStorage.removeItem("googleUserId")
-                sessionStorage.removeItem("googleUserEmail")
-                sessionStorage.removeItem("googleUserName")
-                sessionStorage.removeItem("googleUserToken")
-
                 // 페이지 리디렉션 또는 UI 업데이트
-                window.location.href = "/" // 예시: 홈페이지로 리디렉션
+                window.location.href = "index.html" // 홈페이지로 리디렉션
             })
         }
     } else {
         // gapi가 정의되지 않은 경우에 대한 처리
         console.error("gapi is not defined. Ensure Google API is loaded.")
-        // 필요한 경우 오류 처리 또는 대체 로직 실행
-    }
-}
-
-// Google 로그아웃
-function signOut() {
-    if (typeof gapi !== "undefined" && gapi.auth2) {
-        const auth2 = gapi.auth2.getAuthInstance()
-        if (auth2) {
-            auth2.signOut().then(() => {
-                console.log("User signed out.")
-            })
-        }
+        window.location.href = "index.html" // 홈페이지로 리디렉션
     }
 }

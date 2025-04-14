@@ -1,40 +1,52 @@
 <!DOCTYPE html>
 <html lang="ko">
-<head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>인증 처리 중...</title>
-  <link rel="stylesheet" href="css/style.css">
-  <script src="js/auth.js"></script>
-</head>
-<body>
-  <div class="container">
-    <div class="content-box">
-      <div class="loader"></div>
-      <h2>인증 처리 중입니다...</h2>
-      <p>잠시만 기다려주세요. 자동으로 리디렉션됩니다.</p>
-    </div>
-  </div>
 
-  <script>
-    document.addEventListener('DOMContentLoaded', function() {
-      // URL에서 인증 코드 또는 토큰 추출
-      const urlParams = new URLSearchParams(window.location.search);
-      const code = urlParams.get('code');
-      
-      if (code) {
-        // 코드 저장
-        sessionStorage.setItem('authCode', code);
-        
-        // 인증 완료 후 메인 페이지로 리디렉션
-        window.location.href = 'index.html';
-      } else {
-        // 오류 처리
-        console.error('인증 코드를 받지 못했습니다');
-        alert('인증에 실패했습니다. 다시 시도해주세요.');
-        window.location.href = 'login.html';
-      }
-    });
-  </script>
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>인증 완료</title>
+    <link rel="stylesheet" href="css/style.css">
+</head>
+
+<body>
+    <div class="container">
+        <h1>인증이 완료되었습니다</h1>
+        <div class="content-box">
+            <p>Google 계정 인증이 완료되었습니다. 잠시 후 자동으로 이동합니다.</p>
+            <div class="loader"></div>
+        </div>
+    </div>
+
+    <script>
+        // 부모 창으로 인증 완료 메시지 전달
+        window.onload = function () {
+            // URL에서 액세스 토큰 추출
+            const hashParams = new URLSearchParams(window.location.hash.substr(1));
+            const accessToken = hashParams.get('access_token');
+
+            if (accessToken) {
+                // 부모 창이 있는 경우 메시지 전달
+                if (window.opener) {
+                    window.opener.postMessage({
+                        type: 'oauth-response',
+                        accessToken: accessToken
+                    }, window.location.origin);
+
+                    // 3초 후 창 닫기
+                    setTimeout(function () {
+                        window.close();
+                    }, 3000);
+                } else {
+                    // 부모 창이 없는 경우 (직접 접근한 경우)
+                    localStorage.setItem('googleAccessToken', accessToken);
+                    window.location.href = 'index.html';
+                }
+            } else {
+                document.querySelector('.content-box').innerHTML =
+                    '<p>인증 과정에서 오류가 발생했습니다. <a href="index.html">홈으로 돌아가기</a></p>';
+            }
+        };
+    </script>
 </body>
+
 </html>

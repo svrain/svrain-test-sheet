@@ -6,7 +6,6 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>회원가입</title>
     <link rel="stylesheet" href="css/style.css">
-    <!-- Google API 스크립트 로드 순서 변경 및 추가 -->
     <script src="https://apis.google.com/js/platform.js" async defer></script>
     <script src="https://apis.google.com/js/api.js"></script>
     <script src="https://accounts.google.com/gsi/client"></script>
@@ -16,14 +15,14 @@
     <div class="container">
         <h1>회원가입</h1>
 
-        <div id="google-signin-box" class="content-box">
-            <p>먼저 Google 계정으로 로그인하세요.</p>
+        <div id="google-login-box" class="content-box">
+            <p>Google 계정으로 로그인하세요.</p>
             <div class="button-group">
                 <!-- Google ID 로그인 버튼 컨테이너 -->
                 <div id="g_id_onload"
                     data-client_id="396207225030-154qdg1rqog8s809t5ud19clqfq1o6gn.apps.googleusercontent.com"
-                    data-context="signup" data-ux_mode="popup" data-callback="handleCredentialResponse"
-                    data-auto_prompt="false">
+                    data-context="signup" data-us_mode="popup" data-callback="handleCredentialResponse"
+                    data-auto_promt="false">
                 </div>
                 <div class="g_id_signin" data-type="standard" data-shape="rectangular" data-theme="outline"
                     data-text="signup_with" data-size="large" data-logo_alignment="left">
@@ -43,18 +42,8 @@
                     <input type="text" id="name" name="name" required>
                 </div>
 
-                <div class="form-group">
-                    <label for="phone">전화번호</label>
-                    <input type="tel" id="phone" name="phone" required>
-                </div>
-
-                <div class="form-group">
-                    <label for="address">주소</label>
-                    <input type="text" id="address" name="address" required>
-                </div>
-
-                <button type="submit" class="button primary">회원가입 완료</button>
                 <button type="button" id="cancel-btn" class="button">취소</button>
+                <button type="submit" class="button primary">회원가입 완료</button>
             </form>
         </div>
 
@@ -71,17 +60,14 @@
         </div>
     </div>
 
-    <!-- 스크립트 로드 순서 변경 -->
     <script src="js/auth.js"></script>
     <script src="js/common.js"></script>
     <script src="js/drive.js"></script>
 
     <script>
-        let googleUser = null;
         let userEmail = '';
         let userName = '';
         let googleAPIInitialized = false;
-        let accessToken = null; // 액세스 토큰 저장 변수 추가
 
         // Google API 초기화 함수
         async function initializeGoogleAPI() {
@@ -90,7 +76,7 @@
             }
 
             try {
-                await initSheetsAPI();
+                await initGapi();
                 googleAPIInitialized = true;
                 console.log("Google API 초기화 완료");
             } catch (error) {
@@ -99,67 +85,47 @@
             }
         }
 
-        // Google 로그인 응답 처리 함수
-        function handleCredentialResponse(response) {
-            console.log("Google 로그인 응답:", response);
+        // Google 로그인 처리 함수
+        async function handleGoogleSignIn() {
+            try {
+                await initializeGoogleAPI();
 
-            // JWT 토큰 디코딩 (base64)
-            const token = response.credential;
-            const base64Url = token.split('.')[1];
-            const base64 = base64Url.replace(/-/g, '+').replace(/_/g, '/');
-            const jsonPayload = decodeURIComponent(atob(base64).split('').map(function (c) {
-                return '%' + ('00' + c.charCodeAt(0).toString(16)).slice(-2);
-            }).join(''));
+                const auth2 = gapi.auth2.getAuthInstance();
+                const googleUser = await auth2.signIn({
+                    prompt: 'select_account'
+                });
 
-            const payload = JSON.parse(jsonPayload);
-            console.log("디코딩된 페이로드:", payload);
+                const profile = googleUser.getBasicProfile();
+                userEmail = profile.getEmail();
+                userName = profile.getName();
 
-            // 사용자 정보 추출
-            userEmail = payload.email;
-            userName = payload.name || '';
+                // 액세스 토큰 저장
+                const authResponse = googleUser.getAuthResponse(true);
+                sessionStorage.setItem('googleAccessToken', authResponse.access_token);
 
-            // 토큰 저장 (OAuth2 인증에 필요)
-            sessionStorage.setItem('googleUserToken', token);
-            accessToken = token; // 액세스 토큰 저장
+                // 이미 가입된 사용자인지 확인
+                const exists = await checkUserExists(userEmail);
 
-            // 이미 가입된 사용자인지 확인 - 로컬 스토리지 대신 서버에서 확인
-            checkUserExists(userEmail)
-                .then(exists => {
-                    if (exists) {
-                        alert('이미 가입된 계정입니다. 로그인 페이지로 이동합니다.');
-                        window.location.href = 'login.html';
-                    } else {
-                        // 이메일 표시
-                        document.getElementById('user-email').textContent = userEmail;
-
-                        // 이름 필드에 Google에서 가져온 이름 미리 채우기
-                        if (userName) {
-                            document.getElementById('name').value = userName;
-                        }
-
-                        // 폼 표시
-                        document.getElementById('google-signin-box').style.display = 'none';
-                        document.getElementById('signup-form-box').style.display = 'block';
-                    }
-                })
-                .catch(error => {
-                    console.error("사용자 확인 오류:", error);
-                    // 오류 발생 시 계속 진행 (새 사용자로 간주)
+                if (exists) {
+                    alert('이미 가입된 계정입니다. 로그인 페이지로 이동합니다.');
+                    window.location.href = 'login.html';
+                } else {
+                    // 이메일 표시
                     document.getElementById('user-email').textContent = userEmail;
-                    if (userName) {
-                        document.getElementById('name').value = userName;
-                    }
+
+                    // 폼 표시
                     document.getElementById('google-signin-box').style.display = 'none';
                     document.getElementById('signup-form-box').style.display = 'block';
-                });
+                }
+            } catch (error) {
+                console.error("Google 로그인 오류:", error);
+                alert("Google 로그인 중 오류가 발생했습니다: " + (error.message || "알 수 없는 오류"));
+            }
         }
 
         // 사용자가 이미 존재하는지 확인
         async function checkUserExists(email) {
             try {
-                // Google API 초기화
-                await initializeGoogleAPI();
-
                 // 로컬 스토리지에서 먼저 확인
                 const storedUserData = localStorage.getItem('userData');
                 if (storedUserData) {
@@ -168,6 +134,9 @@
                         return true;
                     }
                 }
+
+                // Google API 초기화
+                await initializeGoogleAPI();
 
                 // 스프레드시트에서 확인
                 return new Promise((resolve, reject) => {
@@ -202,10 +171,8 @@
         }
 
         document.addEventListener('DOMContentLoaded', function () {
-            // Google API 초기화 시도
-            initializeGoogleAPI().catch(error => {
-                console.warn("초기 Google API 초기화 실패:", error);
-            });
+            // Google 로그인 버튼 이벤트 리스너
+            document.getElementById('google-signin-btn').addEventListener('click', handleGoogleSignIn);
 
             // 취소 버튼 이벤트 리스너
             document.getElementById('cancel-btn').addEventListener('click', function () {
@@ -226,8 +193,6 @@
 
                 // 폼 데이터 가져오기
                 const name = document.getElementById('name').value;
-                const phone = document.getElementById('phone').value;
-                const address = document.getElementById('address').value;
 
                 // 로딩 표시
                 document.getElementById('signup-form-box').style.display = 'none';
@@ -237,9 +202,7 @@
                     // 사용자 정보 저장
                     const userData = {
                         name: name,
-                        email: userEmail,
-                        phone: phone,
-                        address: address
+                        email: userEmail
                     };
 
                     console.log("저장할 사용자 정보:", userData);
@@ -247,32 +210,29 @@
                     // Google Sheets API 초기화 및 스프레드시트에 사용자 정보 저장
                     try {
                         console.log("Google Sheets API 초기화 시작");
-                        await initializeGoogleAPI();
+                        await initSheetsAPI();
                         console.log("Google Sheets API 초기화 완료");
-
-                        // 직접 OAuth2 인증 시도
-                        await authenticateWithOAuth2();
 
                         console.log("스프레드시트에 사용자 정보 저장 시작");
                         const result = await registerUserToSpreadsheet(userData);
                         console.log("스프레드시트에 사용자 정보 저장 성공:", result);
-
+                        
                         // 스프레드시트 정보 저장
                         if (result && result.userSpreadsheet) {
                             localStorage.setItem('userSpreadsheet', JSON.stringify(result.userSpreadsheet));
                         }
-
+                        
                         // 로컬 스토리지에 사용자 정보 저장
                         localStorage.setItem('userData', JSON.stringify(userData));
                         console.log("로컬 스토리지에 사용자 정보 저장 성공");
-
+                        
                         // 세션 스토리지에 로그인 상태 저장
                         sessionStorage.setItem('isLoggedIn', 'true');
-
+                        
                         // 성공 메시지 표시
                         document.getElementById('loading').style.display = 'none';
                         document.getElementById('success').style.display = 'block';
-
+                        
                     } catch (sheetError) {
                         console.error("스프레드시트 저장 오류:", sheetError);
                         document.getElementById('loading').style.display = 'none';
@@ -289,50 +249,22 @@
                     document.getElementById('signup-form-box').style.display = 'block';
                 }
             });
-        });
-
-        // 직접 OAuth2 인증 시도 함수
-        async function authenticateWithOAuth2() {
-            return new Promise((resolve, reject) => {
-                // 이미 로그인되어 있는지 확인
-                if (gapi.auth2) {
-                    const authInstance = gapi.auth2.getAuthInstance();
-                    if (authInstance) {
-                        const isSignedIn = authInstance.isSignedIn.get();
-                        if (isSignedIn) {
-                            console.log("이미 OAuth2로 로그인되어 있습니다.");
-                            resolve();
-                            return;
-                        }
+            
+            // 메시지 이벤트 리스너 (OAuth 콜백에서 메시지 수신)
+            window.addEventListener('message', function(event) {
+                // 출처 확인
+                if (event.origin !== window.location.origin) return;
+                
+                // OAuth 응답 처리
+                if (event.data && event.data.type === 'oauth-response') {
+                    const accessToken = event.data.accessToken;
+                    if (accessToken) {
+                        sessionStorage.setItem('googleAccessToken', accessToken);
+                        console.log('OAuth 액세스 토큰 수신 성공');
                     }
                 }
-
-                // 새로운 OAuth2 인증 시도
-                gapi.auth2.authorize({
-                    client_id: '396207225030-154qdg1rqog8s809t5ud19clqfq1o6gn.apps.googleusercontent.com',
-                    scope: 'https://www.googleapis.com/auth/spreadsheets https://www.googleapis.com/auth/drive',
-                    prompt: 'consent',
-                    response_type: 'token id_token'
-                }, function (response) {
-                    if (response.error) {
-                        console.error("OAuth2 인증 실패:", response.error);
-                        reject(new Error("OAuth2 인증 실패: " + response.error));
-                    } else {
-                        console.log("OAuth2 인증 성공:", response);
-                        // 액세스 토큰 저장
-                        accessToken = response.access_token;
-                        sessionStorage.setItem('googleAccessToken', response.access_token);
-
-                        // 액세스 토큰을 gapi 클라이언트에 설정
-                        gapi.client.setToken({
-                            access_token: response.access_token
-                        });
-
-                        resolve();
-                    }
-                });
             });
-        }
+        });
     </script>
 </body>
 

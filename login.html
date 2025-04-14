@@ -4,7 +4,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>login api</title>
+    <title>로그인 api</title>
     <link rel="stylesheet" href="css/style.css">
     <!-- Google API 스크립트 - 비동기 로드 제거 -->
     <script src="https://apis.google.com/js/api.js"></script>
@@ -82,9 +82,7 @@
                             // 로컬 스토리지에 정보가 없는 경우 기본 정보 저장
                             const userData = {
                                 name: payload.name || '',
-                                email: email,
-                                phone: '',
-                                address: ''
+                                email: email
                             };
                             localStorage.setItem('userData', JSON.stringify(userData));
                         }

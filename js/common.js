@@ -101,7 +101,6 @@ function initGAPIClient() {
         })
     })
 }
-
 // 문서 로드 완료 시 실행
 document.addEventListener("DOMContentLoaded", () => {
     // Google API 스크립트가 로드되었는지 확인

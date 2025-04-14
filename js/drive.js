@@ -113,7 +113,7 @@ async function createSpreadsheet(name, email, phone, address) {
 }
 
 // 관리자 스프레드시트에 사용자 정보 추가
-async function addUserToSpreadsheet(name, email) {
+async function addUserToSpreadsheet(name, email, phone, address) {
     return new Promise((resolve, reject) => {
         console.log("스프레드시트에 사용자 추가 시작:", name, email)
 
@@ -305,8 +305,6 @@ async function registerUserToSpreadsheet(userData) {
         const userSpreadsheet = await createSpreadsheet(
             userData.name,
             userData.email,
-            userData.phone || "",
-            userData.address || "",
         )
         console.log("사용자 스프레드시트 생성 완료:", userSpreadsheet)
 
@@ -314,8 +312,6 @@ async function registerUserToSpreadsheet(userData) {
         const adminResult = await addUserToSpreadsheet(
             userData.name,
             userData.email,
-            userData.phone || "",
-            userData.address || "",
         )
         console.log("관리자 스프레드시트 업데이트 완료:", adminResult)
 
