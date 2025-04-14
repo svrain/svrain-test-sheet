@@ -41,35 +41,44 @@ function initGapi() {
     })
 }
 
-// 로그인 상태 확인
+// 로그인 상태 확인 함수 수정
 function isLoggedIn() {
-    return sessionStorage.getItem("isLoggedIn") === "true"
+    try {
+        return sessionStorage.getItem("isLoggedIn") === "true"
+    } catch (error) {
+        console.error("sessionStorage 접근 오류:", error)
+        return false
+    }
 }
 
-// 로그인 상태 체크 및 UI 업데이트
+// 로그인 상태 체크 및 UI 업데이트 함수 수정
 function checkLoginStatus() {
-    if (isLoggedIn()) {
-        // 로그인 상태 UI
-        const loggedOutElement = document.getElementById("logged-out")
-        const loggedInElement = document.getElementById("logged-in")
+    try {
+        if (isLoggedIn()) {
+            // 로그인 상태 UI
+            const loggedOutElement = document.getElementById("logged-out")
+            const loggedInElement = document.getElementById("logged-in")
 
-        if (loggedOutElement) loggedOutElement.style.display = "none"
-        if (loggedInElement) loggedInElement.style.display = "block"
-        
-        // 사용자 정보 가져오기
-        const userData = JSON.parse(localStorage.getItem("userData") || "{}")
-        if (userData) {
-            // 사용자 이름만 표시
-            const userNameElement = document.getElementById("user-name")
-            if (userNameElement) userNameElement.textContent = userData.name || ""
+            if (loggedOutElement) loggedOutElement.style.display = "none"
+            if (loggedInElement) loggedInElement.style.display = "block"
+
+            // 사용자 정보 가져오기
+            const userData = JSON.parse(localStorage.getItem("userData") || "{}")
+            if (userData) {
+                // 사용자 이름만 표시
+                const userNameElement = document.getElementById("user-name")
+                if (userNameElement) userNameElement.textContent = userData.name || ""
+            }
+        } else {
+            // 로그아웃 상태 UI 표시
+            const loggedOutElement = document.getElementById("logged-out")
+            const loggedInElement = document.getElementById("logged-in")
+
+            if (loggedOutElement) loggedOutElement.style.display = "block"
+            if (loggedInElement) loggedInElement.style.display = "none"
         }
-    } else {
-        // 로그아웃 상태 UI 표시
-        const loggedOutElement = document.getElementById("logged-out")
-        const loggedInElement = document.getElementById("logged-in")
-
-        if (loggedOutElement) loggedOutElement.style.display = "block"
-        if (loggedInElement) loggedInElement.style.display = "none"
+    } catch (error) {
+        console.error("UI 업데이트 오류:", error)
     }
 }
 

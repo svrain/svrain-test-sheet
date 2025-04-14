@@ -31,23 +31,32 @@
     </div>
 
     <script>
-         document.addEventListener('DOMContentLoaded', function () {
-            // 로그인 상태 확인
-            checkLoginStatus();
+        document.addEventListener('DOMContentLoaded', function () {
+            try {
+                // 로그인 상태 확인
+                checkLoginStatus();
 
-            // 로그아웃 버튼 이벤트 리스너
-            const logoutButton = document.getElementById('logout-button');
-            if (logoutButton) {
-                logoutButton.addEventListener('click', function () {
-                    // 세션 스토리지 초기화
-                    sessionStorage.removeItem("isLoggedIn");
-                    sessionStorage.removeItem("googleUserId");
-                    sessionStorage.removeItem("googleUserEmail");
-                    sessionStorage.removeItem("googleUserName");
-                    sessionStorage.removeItem("googleUserToken");
+                // 로그아웃 버튼 이벤트 리스너
+                const logoutButton = document.getElementById('logout-button');
+                if (logoutButton) {
+                    logoutButton.addEventListener('click', function () {
+                        try {
+                            // 세션 스토리지 초기화
+                            sessionStorage.removeItem("isLoggedIn");
+                            sessionStorage.removeItem("googleUserId");
+                            sessionStorage.removeItem("googleUserEmail");
+                            sessionStorage.removeItem("googleUserName");
+                            sessionStorage.removeItem("googleUserToken");
 
-                    window.location.href = 'index.html';
-                });
+                            window.location.href = 'index.html';
+                        } catch (error) {
+                            console.error("로그아웃 중 오류:", error);
+                            window.location.href = 'index.html';
+                        }
+                    });
+                }
+            } catch (error) {
+                console.error("초기화 중 오류:", error);
             }
         });
     </script>
