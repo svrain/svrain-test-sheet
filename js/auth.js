@@ -43,7 +43,7 @@ function initGapi() {
 
 // 로그인 상태 확인
 function isLoggedIn() {
-    return sessionStroage.getItem("isLoggedIn") === "true"
+    return sessionStorage.getItem("isLoggedIn") === "true"
 }
 
 // 로그인 상태 체크 및 UI 업데이트
@@ -55,7 +55,7 @@ function checkLoginStatus() {
 
         if (loggedOutElement) loggedOutElement.style.display = "none"
         if (loggedInElement) loggedInElement.style.display = "block"
-
+        
         // 사용자 정보 가져오기
         const userData = JSON.parse(localStorage.getItem("userData") || "{}")
         if (userData) {
